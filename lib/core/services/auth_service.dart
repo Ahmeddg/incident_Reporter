@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
+import 'package:incident_reporter/core/config/app_config.dart';
 import 'package:incident_reporter/core/services/secure_storage_service.dart';
 
 class AuthService {
@@ -14,7 +15,7 @@ class AuthService {
   // Note: For Android emulators, use 10.0.2.2 instead of localhost
   final String _clientId = 'emscommandcenter';
   final String _redirectUri = 'com.example.incidentreporter://oauthredirect';
-  final String _discoveryUrl = 'http://10.0.2.2:8080/realms/ems-command-center/.well-known/openid-configuration';
+  final String _discoveryUrl = AppConfig.keycloakDiscoveryUrl;
 
   final ValueNotifier<bool> isAuthenticated = ValueNotifier<bool>(false);
 
@@ -24,8 +25,19 @@ class AuthService {
   }
 
   Future<bool> login() async {
+    if (AppConfig.demoMode) {
+      await _storage.saveTokens(
+        accessToken: 'demo-access-token',
+        refreshToken: 'demo-refresh-token',
+        idToken: 'demo-id-token',
+      );
+      isAuthenticated.value = true;
+      return true;
+    }
+
     try {
-      final AuthorizationTokenResponse result = await _appAuth.authorizeAndExchangeCode(
+      final AuthorizationTokenResponse result =
+          await _appAuth.authorizeAndExchangeCode(
         AuthorizationTokenRequest(
           _clientId,
           _redirectUri,
@@ -56,8 +68,7 @@ class AuthService {
   }
 
   Future<String?> getValidToken() async {
-    // Basic implementation: return stored token
-    // In a full implementation, you'd check expiry and use refresh token
+    // Basic implementation: return stored token.
     return await _storage.getAccessToken();
   }
 }

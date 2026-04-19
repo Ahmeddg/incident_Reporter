@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:incident_reporter/core/services/auth_service.dart';
+import 'package:incident_reporter/ui/screens/app_shell.dart';
 import 'package:incident_reporter/ui/screens/login_screen.dart';
-import 'package:incident_reporter/ui/screens/profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
-    
+
     return MaterialApp(
       title: 'Incident Reporter',
       debugShowCheckedModeBanner: false,
@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
         valueListenable: authService.isAuthenticated,
         builder: (context, isAuthenticated, child) {
           if (isAuthenticated) {
-            return const ProfileScreen();
+            return const AppShell();
           } else {
             return const LoginScreen();
           }

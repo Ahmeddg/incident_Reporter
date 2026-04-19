@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:incident_reporter/core/config/app_config.dart';
 import 'package:incident_reporter/core/services/auth_service.dart';
 
 class ApiClient {
@@ -7,10 +8,22 @@ class ApiClient {
   factory ApiClient() => _instance;
   ApiClient._internal();
 
-  final String _baseUrl = 'http://10.0.2.2:8081'; // Backend port
+  final String _baseUrl = AppConfig.apiBaseUrl;
   final AuthService _authService = AuthService();
 
   Future<http.Response> get(String path) async {
+    if (AppConfig.demoMode && path == '/api/profile') {
+      return http.Response(
+        jsonEncode({
+          'name': 'Demo User',
+          'email': 'demo.user@incident-reporter.local',
+          'roles': ['USER'],
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    }
+
     final token = await _authService.getValidToken();
     final response = await http.get(
       Uri.parse('$_baseUrl$path'),
