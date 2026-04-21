@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:incident_reporter/core/models/app_notification.dart';
 import 'package:incident_reporter/core/models/chat_message.dart';
 import 'package:incident_reporter/core/models/incident.dart';
+import 'package:incident_reporter/core/services/chatbot_service.dart';
 
 class MockEmergencyService {
   MockEmergencyService._internal();
@@ -11,6 +12,8 @@ class MockEmergencyService {
   static final MockEmergencyService _instance =
       MockEmergencyService._internal();
   factory MockEmergencyService() => _instance;
+  
+  final ChatbotService _chatbotService = ChatbotService();
 
   final ValueNotifier<Incident?> activeIncident =
       ValueNotifier<Incident?>(null);
@@ -47,15 +50,34 @@ class MockEmergencyService {
     );
 
     activeIncident.value = incident;
-    chatMessages.value = <ChatMessage>[
-      ChatMessage(
-        id: 'assistant-${now.microsecondsSinceEpoch}',
-        text:
-            'I am with you. Stay calm and follow safety steps. Tell me what you see right now.',
-        sender: MessageSender.assistant,
-        timestamp: now,
-      ),
-    ];
+    
+    // On initialise le chat avec les données du formulaire
+    final Map<String, dynamic> initialContext = {
+      'emergencyType': emergencyType,
+      'location': location,
+      'description': description,
+      'severity': severity,
+    };
+
+    // On récupère le premier message personnalisé du chatbot
+    Future<void>.delayed(const Duration(milliseconds: 100), () async {
+      try {
+        final assistantMsg = await _chatbotService.sendMessage(
+          "L'utilisateur vient de signaler une urgence via le formulaire.",
+          initialContext: initialContext,
+        );
+        chatMessages.value = <ChatMessage>[assistantMsg];
+      } catch (e) {
+        chatMessages.value = <ChatMessage>[
+          ChatMessage(
+            id: 'assistant-init',
+            text: 'Je suis avec vous. Une ambulance a été demandée pour $location. Pouvez-vous me donner plus de détails sur l\'état de la personne ?',
+            sender: MessageSender.assistant,
+            timestamp: DateTime.now(),
+          ),
+        ];
+      }
+    });
 
     _addNotification(
       title: 'Emergency Report Sent',
@@ -82,16 +104,24 @@ class MockEmergencyService {
       ),
     ];
 
-    Future<void>.delayed(const Duration(milliseconds: 550), () {
-      chatMessages.value = <ChatMessage>[
-        ...chatMessages.value,
-        ChatMessage(
-          id: 'assistant-${DateTime.now().microsecondsSinceEpoch}',
-          text: _assistantReply(trimmed),
-          sender: MessageSender.assistant,
-          timestamp: DateTime.now(),
-        ),
-      ];
+    Future<void>.delayed(const Duration(milliseconds: 200), () async {
+      try {
+        final assistantMsg = await _chatbotService.sendMessage(trimmed);
+        chatMessages.value = <ChatMessage>[
+          ...chatMessages.value,
+          assistantMsg,
+        ];
+      } catch (e) {
+        chatMessages.value = <ChatMessage>[
+          ...chatMessages.value,
+          ChatMessage(
+            id: 'error-${DateTime.now().microsecondsSinceEpoch}',
+            text: 'Désolé, je rencontre des difficultés pour me connecter au service.',
+            sender: MessageSender.assistant,
+            timestamp: DateTime.now(),
+          ),
+        ];
+      }
     });
   }
 
@@ -110,6 +140,7 @@ class MockEmergencyService {
     _statusTimer = null;
     activeIncident.value = null;
     chatMessages.value = <ChatMessage>[];
+    _chatbotService.resetSession();
   }
 
   void _startStatusSimulation() {
@@ -203,20 +234,4 @@ class MockEmergencyService {
     ];
   }
 
-  String _assistantReply(String input) {
-    final String lower = input.toLowerCase();
-    if (lower.contains('bleed') || lower.contains('blood')) {
-      return 'Apply firm pressure with a clean cloth. Keep pressure constant and elevated if possible.';
-    }
-    if (lower.contains('breath') || lower.contains('chest')) {
-      return 'Help the person sit upright and loosen tight clothing. If breathing worsens, call for immediate support around you.';
-    }
-    if (lower.contains('unconscious')) {
-      return 'Check if they are breathing. If breathing, place them in the recovery position and monitor closely.';
-    }
-    if (lower.contains('fire')) {
-      return 'Move away from smoke immediately and keep low while exiting. Do not use elevators.';
-    }
-    return 'Stay calm. Keep sharing updates with me, and keep your phone line available for responders.';
-  }
 }

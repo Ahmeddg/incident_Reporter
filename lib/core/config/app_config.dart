@@ -16,4 +16,9 @@ class AppConfig {
     'API_BASE_URL',
     defaultValue: 'http://10.0.2.2:8081',
   );
+
+  static const String chatbotBaseUrl = String.fromEnvironment(
+    'CHATBOT_BASE_URL',
+    defaultValue: 'http://localhost:3000',
+  );
 }

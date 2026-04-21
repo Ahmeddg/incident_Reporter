@@ -41,3 +41,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Chatbot & Security
+chatbot/node_modules/
+chatbot/.env
+chatbot/google-credentials.json
+*.json
+.env
