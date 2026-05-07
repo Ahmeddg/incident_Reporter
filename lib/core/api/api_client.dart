@@ -12,18 +12,6 @@ class ApiClient {
   final AuthService _authService = AuthService();
 
   Future<http.Response> get(String path) async {
-    if (AppConfig.demoMode && path == '/api/profile') {
-      return http.Response(
-        jsonEncode({
-          'name': 'Demo User',
-          'email': 'demo.user@incident-reporter.local',
-          'roles': ['USER'],
-        }),
-        200,
-        headers: {'content-type': 'application/json'},
-      );
-    }
-
     final token = await _authService.getValidToken();
     final response = await http.get(
       Uri.parse('$_baseUrl$path'),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:incident_reporter/core/services/auth_service.dart';
 import 'package:incident_reporter/ui/screens/home_screen.dart';
 import 'package:incident_reporter/ui/screens/profile_screen.dart';
 
@@ -11,7 +10,6 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  final AuthService _authService = AuthService();
   int _index = 0;
 
   late final List<Widget> _pages = <Widget>[
@@ -24,6 +22,7 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       body: _pages[_index],
       bottomNavigationBar: NavigationBar(
+        height: 70,
         selectedIndex: _index,
         onDestinationSelected: (int value) => setState(() => _index = value),
         destinations: const <NavigationDestination>[
@@ -39,13 +38,6 @@ class _AppShellState extends State<AppShell> {
           ),
         ],
       ),
-      floatingActionButton: _index == 1
-          ? FloatingActionButton.extended(
-              onPressed: () => _authService.logout(),
-              icon: const Icon(Icons.logout),
-              label: const Text('Logout'),
-            )
-          : null,
     );
   }
 }

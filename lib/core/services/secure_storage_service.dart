@@ -1,13 +1,12 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorageService {
-  static final SecureStorageService _instance = SecureStorageService._internal();
+  static final SecureStorageService _instance =
+      SecureStorageService._internal();
   factory SecureStorageService() => _instance;
   SecureStorageService._internal();
 
-  final FlutterSecureStorage _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
@@ -27,8 +26,10 @@ class SecureStorageService {
     }
   }
 
-  Future<String?> getAccessToken() async => await _storage.read(key: _accessTokenKey);
-  Future<String?> getRefreshToken() async => await _storage.read(key: _refreshTokenKey);
+  Future<String?> getAccessToken() async =>
+      await _storage.read(key: _accessTokenKey);
+  Future<String?> getRefreshToken() async =>
+      await _storage.read(key: _refreshTokenKey);
   Future<String?> getIdToken() async => await _storage.read(key: _idTokenKey);
 
   Future<void> clearTokens() async {

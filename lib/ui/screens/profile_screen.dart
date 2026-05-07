@@ -14,7 +14,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final ApiClient _apiClient = ApiClient();
   final AuthService _authService = AuthService();
-  
+
   Map<String, dynamic>? _userProfile;
   String? _accessToken;
   bool _isLoading = true;
@@ -30,7 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final token = await _authService.getValidToken();
       final response = await _apiClient.get('/api/profile');
-      
+
       if (response.statusCode == 200) {
         setState(() {
           _userProfile = jsonDecode(response.body);
@@ -61,12 +61,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final String displayName = _profileDisplayName();
     return Scaffold(
       appBar: AppBar(
         title: const Text('User Profile'),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black,
         actions: [
           IconButton(
             onPressed: () => _authService.logout(),
@@ -79,42 +77,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : RefreshIndicator(
               onRefresh: _fetchData,
               child: ListView(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(20),
                 children: [
-                  const Center(
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Color(0xFF667EEA),
-                      child: Icon(Icons.person, size: 50, color: Colors.white),
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE1E7EC)),
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE2F3F5),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            size: 34,
+                            color: Color(0xFF16697A),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                displayName,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _userProfile?['email'] ??
+                                    _userProfile?['username'] ??
+                                    'Profile session',
+                                style:
+                                    const TextStyle(color: Color(0xFF637381)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  if (_error != null) 
+                  const SizedBox(height: 18),
+                  if (_error != null)
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFFC9C9)),
                       ),
-                      child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     ),
+                  if (_error != null) const SizedBox(height: 18),
                   if (_userProfile != null) ...[
-                    _buildInfoItem('Name', _userProfile!['name'] ?? 'N/A'),
+                    _buildInfoItem('Name', displayName),
+                    _buildInfoItem(
+                      'Username',
+                      _userProfile!['username'] ?? 'N/A',
+                    ),
                     _buildInfoItem('Email', _userProfile!['email'] ?? 'N/A'),
-                    _buildInfoItem('Roles', (_userProfile!['roles'] as List?)?.join(', ') ?? 'N/A'),
+                    _buildInfoItem(
+                      'Roles',
+                      (_userProfile!['roles'] as List?)?.join(', ') ?? 'N/A',
+                    ),
                   ],
                   const SizedBox(height: 24),
                   const Text(
                     'Access Token',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
+                      color: Color(0xFF34444C),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE1E7EC)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,18 +188,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: _accessToken != null 
+                            onPressed: _accessToken != null
                                 ? () => _copyToClipboard(_accessToken!)
                                 : null,
                             icon: const Icon(Icons.copy, size: 18),
                             label: const Text('Copy Token'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF667EEA),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
                           ),
                         ),
                       ],
@@ -157,17 +205,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildInfoItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Column(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE1E7EC)),
+      ),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
-          const Divider(),
+          SizedBox(
+            width: 82,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                color: Color(0xFF637381),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  String _profileDisplayName() {
+    final String firstName = _userProfile?['firstName']?.toString() ?? '';
+    final String lastName = _userProfile?['lastName']?.toString() ?? '';
+    final String fullName = '$firstName $lastName'.trim();
+    if (fullName.isNotEmpty) {
+      return fullName;
+    }
+    return _userProfile?['name']?.toString() ??
+        _userProfile?['username']?.toString() ??
+        'Authenticated user';
   }
 }

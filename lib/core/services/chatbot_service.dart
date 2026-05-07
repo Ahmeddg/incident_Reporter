@@ -10,7 +10,8 @@ class ChatbotService {
 
   String? _sessionId;
 
-  Future<ChatMessage> sendMessage(String text, {Map<String, dynamic>? initialContext}) async {
+  Future<ChatMessage> sendMessage(String text,
+      {Map<String, dynamic>? initialContext}) async {
     final response = await http.post(
       Uri.parse('${AppConfig.chatbotBaseUrl}/api/chat'),
       headers: {'Content-Type': 'application/json'},
@@ -24,7 +25,7 @@ class ChatbotService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       _sessionId = data['sessionId'];
-      
+
       return ChatMessage(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
         text: data['text'] ?? 'No response from bot',
@@ -32,7 +33,8 @@ class ChatbotService {
         timestamp: DateTime.now(),
       );
     } else {
-      throw Exception('Failed to communicate with chatbot: ${response.statusCode}');
+      throw Exception(
+          'Failed to communicate with chatbot: ${response.statusCode}');
     }
   }
 
