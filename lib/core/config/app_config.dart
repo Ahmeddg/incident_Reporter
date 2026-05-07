@@ -9,12 +9,12 @@ class AppConfig {
   static const String keycloakDiscoveryUrl = String.fromEnvironment(
     'KEYCLOAK_DISCOVERY_URL',
     defaultValue:
-        'http://10.0.2.2:8080/realms/ems-command-center/.well-known/openid-configuration',
+        'http://localhost:18080/auth/realms/camunda-platform/.well-known/openid-configuration',
   );
 
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8081',
+    defaultValue: 'http://localhost:8081',
   );
 
   static const String chatbotBaseUrl = String.fromEnvironment(

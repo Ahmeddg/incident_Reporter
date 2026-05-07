@@ -14,7 +14,7 @@ class AuthService {
   // Configuration
   // Note: For Android emulators, use 10.0.2.2 instead of localhost
   final String _clientId = 'emscommandcenter';
-  final String _redirectUri = 'com.example.incidentreporter://oauthredirect';
+  final String _redirectUri = 'http://localhost:8080/auth.html';
   final String _discoveryUrl = AppConfig.keycloakDiscoveryUrl;
 
   final ValueNotifier<bool> isAuthenticated = ValueNotifier<bool>(false);

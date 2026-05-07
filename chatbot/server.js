@@ -733,6 +733,8 @@ app.post("/api/chat", async (req, res) => {
       welcomeLines.push(questions[missing[0]] || `Précisez : ${missing[0]}`);
     }
 
+    // Process will start later when isComplete becomes true.
+
     return res.json({
       text: welcomeLines.join("\n"),
       sessionId: sessionId
@@ -765,16 +767,110 @@ app.post("/api/chat", async (req, res) => {
     console.log(`Query: ${text}`);
     console.log(`Response: ${result.fulfillmentText}`);
 
-    res.json({
+    return res.json({
       text: result.fulfillmentText,
       intent: result.intent?.displayName,
       parameters: result.parameters?.fields,
       sessionId: sessionId
     });
+  } catch (dialogflowError) {
+    console.error("Dialogflow Error, falling back to local processing:", dialogflowError.message);
+    
+    try {
+      console.log(`[API] Processing locally without Dialogflow...`);
+    let sessionState = sessions[sessionId] || { criticalInfo: null, isEmergency: false };
+    const urgentDetected = isEmergencyText(text);
+
+    if (urgentDetected || sessionState.isEmergency) {
+      sessionState.isEmergency = true;
+      
+      const newInfo = extractCriticalInfo(text, {});
+      if (!sessionState.criticalInfo) {
+        sessionState.criticalInfo = newInfo;
+      } else {
+        Object.keys(newInfo).forEach(key => {
+          if (newInfo[key] && newInfo[key] !== "inconnu" && newInfo[key] !== "inconnue") {
+            sessionState.criticalInfo[key] = newInfo[key];
+          }
+        });
+      }
+
+      const simpleText = text.toLowerCase().trim();
+      if (simpleText === "oui" || simpleText === "non") {
+        const missing = missingCriticalFields(sessionState.criticalInfo);
+        if (missing.length > 0) {
+            const targetField = missing[0]; 
+            if (targetField === "respiration") sessionState.criticalInfo.breathing = (simpleText === "oui" ? "présente" : "absente");
+            else if (targetField === "conscience") sessionState.criticalInfo.consciousness = (simpleText === "oui" ? "conscient" : "inconscient");
+            else if (targetField === "perte de sang") sessionState.criticalInfo.bloodLoss = (simpleText === "oui" ? "présente" : "absente");
+        }
+      }
+
+      if (!sessionState.history) sessionState.history = [];
+      sessions[sessionId] = sessionState;
+
+      const isComplete = hasCompleteCriticalInfo(sessionState.criticalInfo);
+
+      if (isComplete && !sessionState.instanceStarted) {
+        sessionState.instanceStarted = true; // Set synchronously to prevent double triggers
+        startCamundaEmergencyInstance(sessionState.criticalInfo).then(res => {
+            console.log("Camunda instance started:", res);
+        }).catch(err => {
+            console.error("Camunda error:", err);
+        });
+        
+        // Force response when complete the FIRST TIME
+        let firstResponse = buildEmergencyResponse(sessionState.criticalInfo);
+        sessionState.history.push({ role: "assistant", content: firstResponse });
+        return res.json({ text: firstResponse, sessionId: sessionId });
+      }
+
+      let triageContext = "";
+      if (sessionState.instanceStarted) {
+          triageContext = `
+[CONTEXTE MÉDICAL ACTUEL]
+- Le signalement est COMPLET et l'ambulance est en route.
+- Données confirmées : ${JSON.stringify(sessionState.criticalInfo)}
+RÔLE ACTUEL : L'utilisateur te pose une question ou cherche du réconfort pendant l'attente. Réponds brièvement avec des conseils de premiers secours ou des paroles rassurantes. NE POSE PLUS DE QUESTIONS sur l'état de la victime, l'ambulance arrive.
+          `;
+      } else {
+          triageContext = `
+[CONTEXTE MÉDICAL ACTUEL]
+- Complet : NON
+- Données confirmées : ${JSON.stringify(sessionState.criticalInfo)}
+- Champs à obtenir : ${missingCriticalFields(sessionState.criticalInfo).join(", ")}
+INTERDICTION : Ne pose pas de question sur un champ déjà connu (confirmé).
+          `;
+      }
+
+      sessionState.history.push({ role: "user", content: text });
+      if (sessionState.history.length > 10) sessionState.history.shift();
+
+      let aiResponse;
+      try {
+        aiResponse = await callModelAPI(text, triageContext, sessionState.history);
+      } catch (error) {
+        console.log("IA Error, fallback.");
+        aiResponse = sessionState.instanceStarted ? "Les secours sont en route. Restez avec la victime et restez calme." : buildMissingInfoPrompt(sessionState.criticalInfo);
+      }
+      
+      sessionState.history.push({ role: "assistant", content: aiResponse });
+      return res.json({ text: aiResponse, sessionId: sessionId });
+    }
+
+    if (isHelpRequest(text)) {
+      return res.json({ text: getHelpTriageFallback(), sessionId: sessionId });
+    }
+
+    const reply = await callModelAPI(text);
+    return res.json({ text: reply, sessionId: sessionId });
+
   } catch (error) {
-    console.error("Dialogflow Error:", error);
-    res.status(500).json({ error: "Failed to communicate with Dialogflow" });
+    console.error("Local processing Error:", error);
+    const emergencyFallback = getEmergencyFallback(text);
+    const helpFallback = isHelpRequest(text) ? getHelpTriageFallback() : null;
   }
+}
 });
 
 app.listen(PORT, () => {
